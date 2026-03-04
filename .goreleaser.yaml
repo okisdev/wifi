@@ -3,15 +3,30 @@ version: 2
 project_name: wifi
 
 builds:
-  - id: darwin
+  - id: darwin-arm64
+    binary: wifi
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+    ldflags:
+      - -s -w
+      - -X github.com/okisdev/wifi/cmd.version={{.Version}}
+      - -X github.com/okisdev/wifi/cmd.commit={{.ShortCommit}}
+      - -X github.com/okisdev/wifi/cmd.date={{.Date}}
+
+  - id: darwin-amd64
     binary: wifi
     goos:
       - darwin
     goarch:
       - amd64
-      - arm64
     env:
       - CGO_ENABLED=1
+      - CGO_CFLAGS=-arch x86_64
+      - CGO_LDFLAGS=-arch x86_64
     ldflags:
       - -s -w
       - -X github.com/okisdev/wifi/cmd.version={{.Version}}
@@ -40,7 +55,8 @@ builds:
 archives:
   - id: default
     builds:
-      - darwin
+      - darwin-arm64
+      - darwin-amd64
       - others
     format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
