@@ -14,7 +14,14 @@ func NewTester() Tester {
 	return &client{}
 }
 
-func (c *client) Run(downloadOnly, uploadOnly bool) (*Result, error) {
+func (c *client) Run(downloadOnly, uploadOnly bool, progressFn func(phase string, partial *Result)) (*Result, error) {
+	progress := func(phase string, partial *Result) {
+		if progressFn != nil {
+			progressFn(phase, partial)
+		}
+	}
+
+	progress("Finding best server...", nil)
 	st := speedtest.New()
 
 	serverList, err := st.FetchServers()
@@ -30,18 +37,21 @@ func (c *client) Run(downloadOnly, uploadOnly bool) (*Result, error) {
 	server := targets[0]
 	ctx := context.Background()
 
+	result := &Result{
+		Server:   server.Sponsor,
+		Location: fmt.Sprintf("%s, %s", server.Name, server.Country),
+	}
+
+	progress("Testing latency...", result)
 	if err := server.PingTestContext(ctx, nil); err != nil {
 		return nil, fmt.Errorf("ping test failed: %w", err)
 	}
 
-	result := &Result{
-		Server:   server.Sponsor,
-		Location: fmt.Sprintf("%s, %s", server.Name, server.Country),
-		Latency:  float64(server.Latency.Milliseconds()),
-		Jitter:   float64(server.Jitter.Milliseconds()),
-	}
+	result.Latency = float64(server.Latency.Milliseconds())
+	result.Jitter = float64(server.Jitter.Milliseconds())
 
 	if !uploadOnly {
+		progress("Testing download...", result)
 		if err := server.DownloadTestContext(ctx); err != nil {
 			return nil, fmt.Errorf("download test failed: %w", err)
 		}
@@ -49,6 +59,7 @@ func (c *client) Run(downloadOnly, uploadOnly bool) (*Result, error) {
 	}
 
 	if !downloadOnly {
+		progress("Testing upload...", result)
 		if err := server.UploadTestContext(ctx); err != nil {
 			return nil, fmt.Errorf("upload test failed: %w", err)
 		}

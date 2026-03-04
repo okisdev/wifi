@@ -73,9 +73,30 @@ type HealthReportData struct {
 	IPv6           bool    `json:"ipv6"`
 	Uptime         string  `json:"uptime"`
 	CaptivePortal  bool    `json:"captive_portal"`
-	ChannelCurrent int     `json:"channel_current"`
-	ChannelNeighbors int   `json:"channel_neighbors"`
-	Congestion     string  `json:"congestion"`
-	BestChannel    int     `json:"best_channel"`
-	Issues         []string `json:"issues"`
+	ChannelCurrent   int      `json:"channel_current"`
+	ChannelNeighbors int      `json:"channel_neighbors"`
+	Congestion       string   `json:"congestion"`
+	BestChannel      int      `json:"best_channel"`
+	PublicIP         string   `json:"public_ip,omitempty"`
+	ISP              string   `json:"isp,omitempty"`
+	ASN              string   `json:"asn,omitempty"`
+	GeoLocation      string   `json:"geo_location,omitempty"`
+	IsVPN            bool     `json:"is_vpn,omitempty"`
+	DNSServersList   string   `json:"dns_servers,omitempty"`
+	DNSLeak          string   `json:"dns_leak,omitempty"`
+	DoH              bool     `json:"doh,omitempty"`
+	DoT              bool     `json:"dot,omitempty"`
+	TracerouteHops   int      `json:"traceroute_hops,omitempty"`
+	TracerouteFinal  string   `json:"traceroute_final,omitempty"`
+	DHCPServer       string   `json:"dhcp_server,omitempty"`
+	DHCPLease        string   `json:"dhcp_lease,omitempty"`
+	Roaming          string   `json:"roaming,omitempty"`
+	DFS              string   `json:"dfs,omitempty"`
+	MACRandom        string   `json:"mac_random,omitempty"`
+	ThroughputTx     float64  `json:"throughput_tx_mbps,omitempty"`
+	ThroughputRx     float64  `json:"throughput_rx_mbps,omitempty"`
+	GatewayPortsOpen string   `json:"gateway_ports_open,omitempty"`
+	FirewallStatus   string   `json:"firewall_status,omitempty"`
+	ARPStatus        string   `json:"arp_status,omitempty"`
+	Issues           []string `json:"issues"`
 }

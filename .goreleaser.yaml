@@ -14,9 +14,9 @@ builds:
       - CGO_ENABLED=1
     ldflags:
       - -s -w
-      - -X github.com/okisdev/wifi-cli/cmd.version={{.Version}}
-      - -X github.com/okisdev/wifi-cli/cmd.commit={{.ShortCommit}}
-      - -X github.com/okisdev/wifi-cli/cmd.date={{.Date}}
+      - -X github.com/okisdev/wifi/cmd.version={{.Version}}
+      - -X github.com/okisdev/wifi/cmd.commit={{.ShortCommit}}
+      - -X github.com/okisdev/wifi/cmd.date={{.Date}}
 
   - id: others
     binary: wifi
@@ -30,9 +30,9 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X github.com/okisdev/wifi-cli/cmd.version={{.Version}}
-      - -X github.com/okisdev/wifi-cli/cmd.commit={{.ShortCommit}}
-      - -X github.com/okisdev/wifi-cli/cmd.date={{.Date}}
+      - -X github.com/okisdev/wifi/cmd.version={{.Version}}
+      - -X github.com/okisdev/wifi/cmd.commit={{.ShortCommit}}
+      - -X github.com/okisdev/wifi/cmd.date={{.Date}}
     ignore:
       - goos: windows
         goarch: arm64

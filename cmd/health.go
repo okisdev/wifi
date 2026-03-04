@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/okisdev/wifi/internal/diag"
@@ -17,6 +18,9 @@ import (
 var (
 	noSpeed          bool
 	noNetworkQuality bool
+	noTraceroute     bool
+	noIdentity       bool
+	noPortScan       bool
 )
 
 var healthCmd = &cobra.Command{
@@ -28,6 +32,9 @@ var healthCmd = &cobra.Command{
 func init() {
 	healthCmd.Flags().BoolVar(&noSpeed, "no-speed", false, "Skip speed test")
 	healthCmd.Flags().BoolVar(&noNetworkQuality, "no-nq", false, "Skip networkQuality test (macOS)")
+	healthCmd.Flags().BoolVar(&noTraceroute, "no-traceroute", false, "Skip traceroute")
+	healthCmd.Flags().BoolVar(&noIdentity, "no-identity", false, "Skip public IP/ISP lookup")
+	healthCmd.Flags().BoolVar(&noPortScan, "no-portscan", false, "Skip gateway port scan")
 	rootCmd.AddCommand(healthCmd)
 }
 
@@ -48,9 +55,12 @@ func runHealth(cmd *cobra.Command, args []string) error {
 	opts := diag.RunOptions{
 		NoSpeed:          noSpeed,
 		NoNetworkQuality: noNetworkQuality,
+		NoTraceroute:     noTraceroute,
+		NoIdentity:       noIdentity,
+		NoPortScan:       noPortScan,
 	}
 
-	report, err := diag.RunAll(ctx, scanner, tester, opts, func(step diag.DiagStep) {
+	report, err := diag.RunAll(ctx, scanner, tester, opts, func(step diag.DiagStep, _ *diag.HealthReport) {
 		if !jsonOutput {
 			fmt.Fprintf(os.Stderr, "\r[%d/%d] %s...     ", step.Index+1, step.Total, step.Name)
 		}
@@ -124,6 +134,132 @@ func buildHealthReportData(r *diag.HealthReport) *output.HealthReportData {
 		d.ChannelNeighbors = r.ChannelHealth.NeighborCount
 		d.Congestion = r.ChannelHealth.CongestionLevel
 		d.BestChannel = r.ChannelHealth.BestChannel
+	}
+
+	// Network Identity
+	if r.Identity != nil && r.Identity.Err == nil {
+		d.PublicIP = r.Identity.PublicIP
+		d.ISP = r.Identity.ISP
+		d.ASN = r.Identity.ASN
+		d.IsVPN = r.Identity.IsVPN
+		loc := ""
+		if r.Identity.City != "" {
+			loc = r.Identity.City
+		}
+		if r.Identity.Country != "" {
+			if loc != "" {
+				loc += ", "
+			}
+			loc += r.Identity.Country
+		}
+		d.GeoLocation = loc
+	}
+
+	// DNS Configuration
+	if r.DNSServers != nil && r.DNSServers.Err == nil && len(r.DNSServers.Servers) > 0 {
+		d.DNSServersList = strings.Join(r.DNSServers.Servers, ", ")
+	}
+	if r.DNSLeak != nil && r.DNSLeak.Err == nil {
+		if r.DNSLeak.IsLeaking {
+			d.DNSLeak = "Leak detected"
+		} else {
+			d.DNSLeak = "No leak"
+		}
+	}
+	if r.DoHDoT != nil && r.DoHDoT.Err == nil {
+		d.DoH = r.DoHDoT.DoHSupported
+		d.DoT = r.DoHDoT.DoTSupported
+	}
+
+	// Traceroute
+	if r.Traceroute != nil && r.Traceroute.Err == nil && len(r.Traceroute.Hops) > 0 {
+		d.TracerouteHops = len(r.Traceroute.Hops)
+		lastHop := r.Traceroute.Hops[len(r.Traceroute.Hops)-1]
+		if lastHop.Timeout {
+			d.TracerouteFinal = "timeout"
+		} else {
+			d.TracerouteFinal = fmt.Sprintf("%.1f ms", lastHop.RTTMs)
+		}
+	}
+
+	// DHCP
+	if r.DHCP != nil && r.DHCP.Err == nil {
+		d.DHCPServer = r.DHCP.ServerIP
+		d.DHCPLease = r.DHCP.LeaseTime
+	}
+
+	// Roaming
+	if r.Roaming != nil && r.Roaming.Err == nil {
+		features := []string{}
+		if r.Roaming.Has80211r {
+			features = append(features, "802.11r")
+		}
+		if r.Roaming.Has80211k {
+			features = append(features, "802.11k")
+		}
+		if r.Roaming.Has80211v {
+			features = append(features, "802.11v")
+		}
+		if len(features) > 0 {
+			d.Roaming = strings.Join(features, ", ")
+		} else {
+			d.Roaming = "None detected"
+		}
+	}
+
+	// DFS
+	if r.DFS != nil && r.DFS.Err == nil {
+		if r.DFS.IsDFS {
+			d.DFS = fmt.Sprintf("Yes (ch %d, %s)", r.DFS.Channel, r.DFS.State)
+		} else {
+			d.DFS = "No"
+		}
+	}
+
+	// MAC Randomization
+	if r.MACRandom != nil && r.MACRandom.Err == nil {
+		if r.MACRandom.Enabled {
+			d.MACRandom = "Enabled (locally-administered)"
+		} else {
+			d.MACRandom = "Disabled (hardware)"
+		}
+	}
+
+	// Throughput
+	if r.Throughput != nil && r.Throughput.Err == nil {
+		d.ThroughputTx = r.Throughput.TxBytesPerSec * 8 / 1_000_000
+		d.ThroughputRx = r.Throughput.RxBytesPerSec * 8 / 1_000_000
+	}
+
+	// Gateway ports
+	if r.GatewayPorts != nil && r.GatewayPorts.Err == nil {
+		if len(r.GatewayPorts.OpenPorts) == 0 {
+			d.GatewayPortsOpen = "None"
+		} else {
+			ports := []string{}
+			for _, p := range r.GatewayPorts.OpenPorts {
+				ports = append(ports, fmt.Sprintf("%d/%s", p.Port, p.Service))
+			}
+			d.GatewayPortsOpen = strings.Join(ports, ", ")
+		}
+	}
+
+	// Firewall
+	if r.Firewall != nil && r.Firewall.Err == nil {
+		if r.Firewall.Enabled {
+			d.FirewallStatus = fmt.Sprintf("Enabled (%s)", r.Firewall.Platform)
+		} else {
+			d.FirewallStatus = fmt.Sprintf("Disabled (%s)", r.Firewall.Platform)
+		}
+	}
+
+	// ARP spoof
+	if r.ARPSpoof != nil && r.ARPSpoof.Err == nil {
+		if r.ARPSpoof.IsSuspicious {
+			d.ARPStatus = "Suspicious — duplicate MACs"
+		} else {
+			d.ARPStatus = "OK"
+		}
 	}
 
 	return d

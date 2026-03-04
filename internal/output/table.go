@@ -225,6 +225,28 @@ func (r *TableRenderer) RenderHealthReport(w io.Writer, data *HealthReportData) 
 		r.printKV(w, "SNR", fmt.Sprintf("%d dB", data.SNR))
 	}
 
+	// Section: Network Identity
+	if data.PublicIP != "" {
+		r.printSection(w, "Network Identity")
+		r.printKV(w, "Public IP", data.PublicIP)
+		if data.ISP != "" {
+			r.printKV(w, "ISP", data.ISP)
+		}
+		if data.ASN != "" {
+			r.printKV(w, "ASN", data.ASN)
+		}
+		if data.GeoLocation != "" {
+			r.printKV(w, "Location", data.GeoLocation)
+		}
+		if data.IsVPN {
+			vpnStr := "Detected"
+			if !r.NoColor {
+				vpnStr = StyleWarn.Render(vpnStr)
+			}
+			r.printKV(w, "VPN/Relay", vpnStr)
+		}
+	}
+
 	// Section: Speed Test
 	if data.Download > 0 || data.Upload > 0 {
 		r.printSection(w, "Speed Test")
@@ -262,6 +284,27 @@ func (r *TableRenderer) RenderHealthReport(w io.Writer, data *HealthReportData) 
 		r.printKV(w, "DNS", data.DNS)
 	}
 
+	// Section: DNS Configuration
+	if data.DNSServersList != "" || data.DNSLeak != "" {
+		r.printSection(w, "DNS Configuration")
+		if data.DNSServersList != "" {
+			r.printKV(w, "Servers", data.DNSServersList)
+		}
+		if data.DNSLeak != "" {
+			r.printKV(w, "DNS Leak", data.DNSLeak)
+		}
+		dohStr := "No"
+		if data.DoH {
+			dohStr = "Yes"
+		}
+		dotStr := "No"
+		if data.DoT {
+			dotStr = "Yes"
+		}
+		r.printKV(w, "DoH", dohStr)
+		r.printKV(w, "DoT", dotStr)
+	}
+
 	// Section: Interface Stats
 	r.printSection(w, "Interface Stats")
 	r.printKV(w, "TX/RX Errors", fmt.Sprintf("%d / %d", data.TxErrors, data.RxErrors))
@@ -283,6 +326,36 @@ func (r *TableRenderer) RenderHealthReport(w io.Writer, data *HealthReportData) 
 		}
 	}
 	r.printKV(w, "Captive", captiveStr)
+	if data.DHCPServer != "" {
+		r.printKV(w, "DHCP Server", data.DHCPServer)
+	}
+	if data.DHCPLease != "" {
+		r.printKV(w, "Lease Time", data.DHCPLease)
+	}
+	if data.ThroughputTx > 0 || data.ThroughputRx > 0 {
+		r.printKV(w, "Throughput", fmt.Sprintf("%.1f Mbps TX / %.1f Mbps RX", data.ThroughputTx, data.ThroughputRx))
+	}
+
+	// Section: Route
+	if data.TracerouteHops > 0 {
+		r.printSection(w, "Route")
+		r.printKV(w, "Hops", fmt.Sprintf("%d", data.TracerouteHops))
+		r.printKV(w, "Final RTT", data.TracerouteFinal)
+	}
+
+	// Section: WiFi Advanced
+	if data.Roaming != "" || data.DFS != "" || data.MACRandom != "" {
+		r.printSection(w, "WiFi Advanced")
+		if data.Roaming != "" {
+			r.printKV(w, "Roaming", data.Roaming)
+		}
+		if data.DFS != "" {
+			r.printKV(w, "DFS", data.DFS)
+		}
+		if data.MACRandom != "" {
+			r.printKV(w, "MAC Random", data.MACRandom)
+		}
+	}
 
 	// Section: Channel Analysis
 	if data.ChannelCurrent > 0 {
@@ -302,6 +375,20 @@ func (r *TableRenderer) RenderHealthReport(w io.Writer, data *HealthReportData) 
 		r.printKV(w, "Congestion", congestion)
 		if data.BestChannel > 0 && data.BestChannel != data.ChannelCurrent {
 			r.printKV(w, "Recommended", fmt.Sprintf("%d", data.BestChannel))
+		}
+	}
+
+	// Section: Security
+	if data.FirewallStatus != "" || data.GatewayPortsOpen != "" || data.ARPStatus != "" {
+		r.printSection(w, "Security")
+		if data.FirewallStatus != "" {
+			r.printKV(w, "Firewall", data.FirewallStatus)
+		}
+		if data.GatewayPortsOpen != "" {
+			r.printKV(w, "Gateway Ports", data.GatewayPortsOpen)
+		}
+		if data.ARPStatus != "" {
+			r.printKV(w, "ARP Table", data.ARPStatus)
 		}
 	}
 

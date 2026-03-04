@@ -28,8 +28,10 @@ func init() {
 func runSpeed(cmd *cobra.Command, args []string) error {
 	tester := speed.NewTester()
 
-	fmt.Fprintln(os.Stderr, "Finding best server...")
-	result, err := tester.Run(downloadOnly, uploadOnly)
+	result, err := tester.Run(downloadOnly, uploadOnly, func(phase string, _ *speed.Result) {
+		fmt.Fprintf(os.Stderr, "\r\033[K%s", phase)
+	})
+	fmt.Fprint(os.Stderr, "\r\033[K")
 	if err != nil {
 		return fmt.Errorf("speed test failed: %w", err)
 	}

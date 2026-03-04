@@ -12,5 +12,5 @@ type Result struct {
 
 // Tester runs speed tests.
 type Tester interface {
-	Run(downloadOnly, uploadOnly bool) (*Result, error)
+	Run(downloadOnly, uploadOnly bool, progressFn func(phase string, partial *Result)) (*Result, error)
 }

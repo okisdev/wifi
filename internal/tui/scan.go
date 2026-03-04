@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +12,8 @@ import (
 	"github.com/okisdev/wifi/internal/output"
 	"github.com/okisdev/wifi/internal/wifi"
 )
+
+type scanTickMsg time.Time
 
 type sortMode int
 
@@ -66,6 +69,7 @@ type scanModel struct {
 	offset     int
 	width      int
 	height     int
+	prevRSSI   map[string]int // BSSID → previous RSSI for trend display
 }
 
 type scanDoneMsg struct {
@@ -91,8 +95,14 @@ func (m scanModel) doScan() tea.Cmd {
 	}
 }
 
+func (m scanModel) tick() tea.Cmd {
+	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return scanTickMsg(t)
+	})
+}
+
 func (m scanModel) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.doScan())
+	return tea.Batch(m.spinner.Tick, m.doScan(), m.tick())
 }
 
 func (m *scanModel) applyFilterSort() {
@@ -140,7 +150,18 @@ func (m *scanModel) applyFilterSort() {
 
 func (m scanModel) Update(msg tea.Msg) (scanModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case scanTickMsg:
+		// Silent background refresh — no loading state to avoid flicker
+		return m, tea.Batch(m.doScan(), m.tick())
+
 	case scanDoneMsg:
+		// Snapshot current RSSI before replacing for trend column
+		if len(m.networks) > 0 {
+			m.prevRSSI = make(map[string]int, len(m.networks))
+			for _, n := range m.networks {
+				m.prevRSSI[n.BSSID] = n.RSSI
+			}
+		}
 		m.networks = msg.networks
 		m.err = msg.err
 		m.loading = false
@@ -150,7 +171,7 @@ func (m scanModel) Update(msg tea.Msg) (scanModel, tea.Cmd) {
 	case refreshMsg:
 		m.loading = true
 		m.err = nil
-		return m, tea.Batch(m.spinner.Tick, m.doScan())
+		return m, tea.Batch(m.spinner.Tick, m.doScan(), m.tick())
 
 	case tea.KeyMsg:
 		switch {
@@ -229,8 +250,8 @@ func (m scanModel) View() string {
 	}
 
 	// Table header
-	header := fmt.Sprintf("  %-24s %-17s %-8s %-4s %-6s %-10s %-6s %s",
-		"SSID", "BSSID", "SIGNAL", "CH", "BAND", "SECURITY", "WIDTH", "QUALITY")
+	header := fmt.Sprintf("  %-24s %-17s %-8s %-6s %-4s %-6s %-10s %-6s %s",
+		"SSID", "BSSID", "SIGNAL", "TREND", "CH", "BAND", "SECURITY", "WIDTH", "QUALITY")
 	b.WriteString(styleHeaderRow.Render(header) + "\n")
 
 	// Rows
@@ -258,8 +279,22 @@ func (m scanModel) View() string {
 		rssiStr = lipgloss.NewStyle().Foreground(color).Render(rssiStr)
 		quality = lipgloss.NewStyle().Foreground(color).Render(quality)
 
-		row := fmt.Sprintf("  %-24s %-17s %-8s %-4d %-6s %-10s %-6s %s %s",
-			ssid, n.BSSID, rssiStr, n.Channel, string(n.Band),
+		// Trend: compare with previous scan
+		trend := "  ·   "
+		if prev, ok := m.prevRSSI[n.BSSID]; ok {
+			delta := n.RSSI - prev
+			switch {
+			case delta > 0:
+				trend = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Render(fmt.Sprintf(" +%-3d ", delta))
+			case delta < 0:
+				trend = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4444")).Render(fmt.Sprintf(" %-4d ", delta))
+			default:
+				trend = "  ·   "
+			}
+		}
+
+		row := fmt.Sprintf("  %-24s %-17s %-8s %s %-4d %-6s %-10s %-6s %s %s",
+			ssid, n.BSSID, rssiStr, trend, n.Channel, string(n.Band),
 			string(n.Security), fmt.Sprintf("%dMHz", n.Width),
 			bar, quality)
 

@@ -19,7 +19,7 @@ func renderTabs(activeTab int, width int) string {
 		}
 	}
 
-	title := styleTitle.Render("wifi-cli")
+	title := styleTitle.Render("wifi")
 	row := title + "   " + strings.Join(tabs, " ")
 
 	// Pad to width
