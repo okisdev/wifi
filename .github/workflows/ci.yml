@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build (darwin)
+        run: CGO_ENABLED=1 go build -o /dev/null .
+
+      - name: Build (linux/amd64)
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /dev/null .
+
+      - name: Build (windows/amd64)
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o /dev/null .

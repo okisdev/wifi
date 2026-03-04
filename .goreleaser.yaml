@@ -1,0 +1,76 @@
+version: 2
+
+project_name: wifi
+
+builds:
+  - id: darwin
+    binary: wifi
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
+    ldflags:
+      - -s -w
+      - -X github.com/okisdev/wifi-cli/cmd.version={{.Version}}
+      - -X github.com/okisdev/wifi-cli/cmd.commit={{.ShortCommit}}
+      - -X github.com/okisdev/wifi-cli/cmd.date={{.Date}}
+
+  - id: others
+    binary: wifi
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/okisdev/wifi-cli/cmd.version={{.Version}}
+      - -X github.com/okisdev/wifi-cli/cmd.commit={{.ShortCommit}}
+      - -X github.com/okisdev/wifi-cli/cmd.date={{.Date}}
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    builds:
+      - darwin
+      - others
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+brews:
+  - name: wifi
+    repository:
+      owner: okisdev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/okisdev/wifi"
+    description: "Cross-platform WiFi diagnostic CLI tool"
+    license: "MIT"
+    install: |
+      bin.install "wifi"
+    test: |
+      system "#{bin}/wifi", "version"
