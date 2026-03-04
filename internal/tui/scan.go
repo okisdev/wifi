@@ -215,6 +215,14 @@ func (m scanModel) View() string {
 		len(m.filtered), m.sortBy.String(), m.bandFilter.String())
 	b.WriteString(styleStatusBar.Render(filterInfo) + "\n")
 
+	// Location Services warning
+	if wifi.AllSSIDsHidden(m.networks) {
+		warning := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFCC00")).
+			Render("  ⚠ " + wifi.LocationServicesWarning)
+		b.WriteString(warning + "\n")
+	}
+
 	if len(m.filtered) == 0 {
 		b.WriteString("\n  No networks found.\n")
 		return b.String()

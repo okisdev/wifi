@@ -82,6 +82,31 @@ func BandFromChannel(ch int) Band {
 	}
 }
 
+// LocationServicesWarning is the message shown when Location Services permission is missing.
+const LocationServicesWarning = "SSID/BSSID data unavailable. Grant Location Services permission to your terminal app:\n" +
+	"  System Settings → Privacy & Security → Location Services → [Terminal App] → Enable"
+
+// MissingLocationPermission returns true if the interface is connected but
+// SSID is empty, which indicates missing Location Services permission on macOS.
+func MissingLocationPermission(info *InterfaceInfo) bool {
+	return info != nil && info.Connected && info.SSID == ""
+}
+
+// AllSSIDsHidden returns true if there are networks but every SSID is empty.
+// This almost certainly indicates a macOS Location Services permission issue
+// rather than all networks actually being hidden.
+func AllSSIDsHidden(nets []Network) bool {
+	if len(nets) == 0 {
+		return false
+	}
+	for _, n := range nets {
+		if n.SSID != "" {
+			return false
+		}
+	}
+	return true
+}
+
 // BandFromFrequency returns the band for a given frequency.
 func BandFromFrequency(freq int) Band {
 	switch {

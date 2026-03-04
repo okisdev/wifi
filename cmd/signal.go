@@ -56,6 +56,10 @@ func runSingleSignal(scanner wifi.Scanner) error {
 		return fmt.Errorf("not connected to any WiFi network")
 	}
 
+	if wifi.MissingLocationPermission(info) {
+		fmt.Fprintf(os.Stderr, "⚠ %s\n\n", wifi.LocationServicesWarning)
+	}
+
 	data := output.SignalData{
 		SSID:    info.SSID,
 		RSSI:    info.RSSI,
@@ -77,6 +81,10 @@ func runWatch(scanner wifi.Scanner) error {
 	}
 	if !info.Connected {
 		return fmt.Errorf("not connected to any WiFi network")
+	}
+
+	if wifi.MissingLocationPermission(info) {
+		fmt.Fprintf(os.Stderr, "⚠ %s\n\n", wifi.LocationServicesWarning)
 	}
 
 	monitor := sig.NewMonitor(scanner, interval, 300)

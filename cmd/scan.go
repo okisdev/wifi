@@ -73,6 +73,11 @@ func runScan(cmd *cobra.Command, args []string) error {
 		})
 	}
 
+	// Warn if Location Services permission is likely missing
+	if wifi.AllSSIDsHidden(networks) {
+		fmt.Fprintf(os.Stderr, "\n⚠ %s\n", wifi.LocationServicesWarning)
+	}
+
 	// Convert to display rows
 	rows := make([]output.NetworkRow, len(networks))
 	for i, n := range networks {

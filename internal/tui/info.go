@@ -165,5 +165,14 @@ func (m infoModel) View() string {
 		b.WriteString("  " + styleLabel.Render(r.label) + " " + r.value + "\n")
 	}
 
+	// Location Services warning
+	if wifi.MissingLocationPermission(info) {
+		b.WriteString("\n")
+		warning := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFCC00")).
+			Render("  ⚠ " + wifi.LocationServicesWarning)
+		b.WriteString(warning + "\n")
+	}
+
 	return b.String()
 }

@@ -128,7 +128,9 @@ int getInterfaceInfo(CInterfaceInfo *info) {
 		info->bssid = copyCString(iface.bssid);
 		info->rssi = iface.rssiValue;
 		info->noise = iface.noiseMeasurement;
-		info->connected = (iface.ssid != nil) ? 1 : 0;
+		// Use transmitRate to detect connectivity — iface.ssid requires
+		// Location Services and returns nil without permission, even when connected.
+		info->connected = (iface.transmitRate > 0) ? 1 : 0;
 
 		if (iface.wlanChannel) {
 			info->channel = (long)iface.wlanChannel.channelNumber;

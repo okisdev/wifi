@@ -54,6 +54,10 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		data["Noise"] = fmt.Sprintf("%d dBm", info.Noise)
 	}
 
+	if wifi.MissingLocationPermission(info) {
+		fmt.Fprintf(os.Stderr, "\n⚠ %s\n\n", wifi.LocationServicesWarning)
+	}
+
 	renderer := getRenderer()
 	return renderer.RenderInterfaceInfo(os.Stdout, data)
 }

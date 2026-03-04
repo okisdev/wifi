@@ -142,7 +142,16 @@ func (m signalModel) View() string {
 	if ssid == "" {
 		ssid = "(unknown)"
 	}
-	b.WriteString("  " + styleLabel.Render("Network") + " " + ssid + "\n\n")
+	b.WriteString("  " + styleLabel.Render("Network") + " " + ssid + "\n")
+
+	// Location Services warning
+	if m.ssid == "" {
+		warning := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFCC00")).
+			Render("  ⚠ " + wifi.LocationServicesWarning)
+		b.WriteString(warning + "\n")
+	}
+	b.WriteString("\n")
 
 	// RSSI bar
 	bar := output.SignalBar(m.rssi, false)
